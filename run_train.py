@@ -96,6 +96,17 @@ def parse_args():
         default=1000,
         help='save a trained model every after this number of iterations')
 
+    parser.add_argument(
+        '--test_image',
+        type=str,
+        default=None,
+        help='File path of content image (notation in the paper : x)')
+    parser.add_argument(
+        '--max_size',
+        type=int,
+        default=None,
+        help='The maximum width or height of input images')
+
     return check_args(parser.parse_args())
 
 
@@ -151,7 +162,9 @@ def main():
         num_epochs=args.num_epochs,
         batch_size=args.batch_size,
         check_period=args.checkpoint_every,
-        save_path=args.output)
+        save_path=args.output,
+        test_image=args.test_image,
+        max_size=args.max_size)
 
     # launch the graph in a session
     start_time = datetime.now()

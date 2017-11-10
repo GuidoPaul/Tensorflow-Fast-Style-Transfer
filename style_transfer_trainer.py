@@ -13,7 +13,7 @@ class StyleTransferTrainer(object):
     def __init__(self, content_layer_ids, style_layer_ids, session, net,
                  content_images, style_image, content_weight, style_weight,
                  tv_weight, learn_rate, num_epochs, batch_size, check_period,
-                 save_path):
+                 save_path, test_image, max_size):
         self.net = net
         self.sess = session
 
@@ -26,8 +26,7 @@ class StyleTransferTrainer(object):
         # input images
         mod = len(content_images) % batch_size
         self.x_list = content_images[:-mod]
-        self.y_s0 = style_image
-        self.content_size = len(self.x_list)
+        self.x_s0 = style_image
 
         # parameters for optimization
         self.content_weight = content_weight
@@ -47,6 +46,25 @@ class StyleTransferTrainer(object):
 
         # build graph for style transfer
         self._build_graph()
+
+        if test_image is not None:
+            self.TEST = True
+
+            # load content image
+            self.test_image = utils.load_image(test_image, max_size=max_size)
+
+            # build graph
+            self.x_test = tf.placeholder(
+                tf.float32, shape=self.test_image.shape, name='test_input')
+            self.xi_test = tf.expand_dims(self.x_test,
+                                          0)  # add one dim for batch
+
+            # result image from transform-net
+            self.y_hat_test = self.tester.net(
+                self.xi_test / 255.0
+            )  # please build graph for train first. tester.net reuses variables.
+        else:
+            self.TEST = False
 
         self.TEST = False
 
@@ -95,31 +113,30 @@ class StyleTransferTrainer(object):
         self.batch_shape = (self.batch_size, 256, 256, 3)
 
         # graph input
-        self.y_c = tf.placeholder(
+        self.x_c = tf.placeholder(
             tf.float32, shape=self.batch_shape, name='content')
-        self.y_s = tf.placeholder(
-            tf.float32, shape=self.y_s0.shape, name='style')
-        self.y_si = tf.expand_dims(self.y_s, 0)  # add one dim for batch
+        self.x_s = tf.placeholder(
+            tf.float32, shape=self.x_s0.shape, name='style')
+        self.x_si = tf.expand_dims(self.x_s, 0)  # add one dim for batch
 
         # preprocess for VGG
-        self.y_c_pre = self.net.preprocess(self.y_c)
-        self.y_s_pre = self.net.preprocess(self.y_si)
+        self.x_c_pre = self.net.preprocess(self.x_c)
+        self.x_s_pre = self.net.preprocess(self.x_si)
 
         # get content-layer-feature for content loss
-        content_layers = self.net.feed_forward(self.y_c_pre, scope='content')
+        content_layers = self.net.feed_forward(self.x_c_pre, scope='content')
         self.Ps = {}
         for id in self.CONTENT_LAYERS:
             self.Ps[id] = content_layers[id]
 
         # get style-layer-feature for style loss
-        style_layers = self.net.feed_forward(self.y_s_pre, scope='style')
+        style_layers = self.net.feed_forward(self.x_s_pre, scope='style')
         self.As = {}
         for id in self.STYLE_LAYERS:
             self.As[id] = self._gram_matrix(style_layers[id])
 
         # result of image transform net
-        self.x = self.y_c / 255.0
-        self.y_hat = self.transform.net(self.x)
+        self.y_hat = self.transform.net(self.x_c / 255.0)
 
         # get layer-values for x
         self.y_hat_pre = self.net.preprocess(self.y_hat)
@@ -237,7 +254,6 @@ class StyleTransferTrainer(object):
 
         while epoch < self.num_epochs:
             while iterations * self.batch_size < num_examples:
-
                 curr = iterations * self.batch_size
                 step = curr + self.batch_size
                 x_batch = np.zeros(self.batch_shape, dtype=np.float32)
@@ -254,8 +270,8 @@ class StyleTransferTrainer(object):
                         train_op, merged_summary_op, self.L_total,
                         self.L_content, self.L_style, self.L_tv, global_step
                     ],
-                    feed_dict={self.y_c: x_batch,
-                               self.y_s: self.y_s0})
+                    feed_dict={self.x_c: x_batch,
+                               self.x_s: self.x_s0})
 
                 print('epoch : %d, iter : %4d, ' % (epoch, step),
                       'L_total : %g, L_content : %g, L_style : %g, L_tv : %g' %
