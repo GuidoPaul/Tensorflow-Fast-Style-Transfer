@@ -1,3 +1,3 @@
-optirun python run_train.py --vgg_model=data --trainDB_path=data/wallpaper --style=style/la_muse.jpg --output=models
+CUDA_VISIBLE_DEVICES=0 optirun python run_train.py --vgg_model=data --trainDB_path=data/wallpaper --style=style/la_muse.jpg --output=models
 
 optirun python run_test.py --style_model=models/la_muse.ckpt --content=content/female_knight.jpg --output=result.jpg
