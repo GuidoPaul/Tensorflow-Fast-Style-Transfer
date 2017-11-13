@@ -66,8 +66,6 @@ class StyleTransferTrainer(object):
         else:
             self.TEST = False
 
-        self.TEST = False
-
     def _gram_matrix(self, tensor, shape=None):
         if shape is not None:
             B = shape[0]  # batch size
