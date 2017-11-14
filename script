@@ -1,3 +1,10 @@
 CUDA_VISIBLE_DEVICES=0 optirun python run_train.py --vgg_model=data --trainDB_path=data/wallpaper --style=style/la_muse.jpg --output=models
 
 optirun python run_test.py --style_model=models/la_muse.ckpt --content=content/female_knight.jpg --output=result.jpg
+
+
+
+floyd run \
+--data baosl/datasets/train2014:train2014 \
+--data baosl/datasets/vgg19_model:vgg19_model \
+"python run_train.py --vgg_model=/vgg19_model --trainDB_path=/train2014/train2014 --style=style/la_muse.jpg --output=models"
