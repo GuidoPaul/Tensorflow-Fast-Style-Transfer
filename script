@@ -1,10 +1,20 @@
-CUDA_VISIBLE_DEVICES=0 optirun python run_train.py --vgg_model=data --trainDB_path=data/wallpaper --style=style/la_muse.jpg --output=models
+CUDA_VISIBLE_DEVICES=0 optirun python run_train.py --vgg_model=vgg19_model --trainDB_path=wallpaper --style=style/la_muse.jpg --output=models
 
 optirun python run_test.py --style_model=models/la_muse.ckpt --content=content/female_knight.jpg --output=result.jpg
 
 
-
-floyd run --gpu tensorflow-1.4 \
+## gpu
+floyd run --gpu --env tensorflow-1.4 \
 --data baosl/datasets/train2014:train2014 \
 --data baosl/datasets/vgg19_model:vgg19_model \
-"python run_train.py --vgg_model=/vgg19_model --trainDB_path=/train2014/train2014 --style=style/la_muse.jpg --output=models"
+"python run_train.py --vgg_model=/vgg19_model/vgg19_model --trainDB_path=/train2014/train2014 --style=style/la_muse.jpg --output=/output/models"
+
+
+## cpu test
+floyd run --cpu --env tensorflow-1.4 \
+--data baosl/datasets/vgg19_model:vgg19_model \
+"python run_train.py --vgg_model=/vgg19_model/vgg19_model --trainDB_path=wallpaper --style=style/la_muse.jpg --output=/output/models"
+
+floyd run --cpu --env tensorflow-1.4 \
+--data baosl/projects/tensorflow-fast-style-transfer/5/output:models \
+"python run_test.py --style_model=/models/models/final.ckpt --content=content/female_knight.jpg --output=/output/result.jpg"
