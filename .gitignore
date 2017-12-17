@@ -1,5 +1,12 @@
-/data/imagenet-vgg-verydeep-19.mat
+/pre_trained_model/*
+/train2014/*
+/content/*
+/style/*
+/result/*
 /models/*
+
 /__pycache__
+
+script
 .floydexpt
 .floydignore
