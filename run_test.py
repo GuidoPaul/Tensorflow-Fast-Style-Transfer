@@ -71,7 +71,7 @@ def check_args(args):
         print('There is no %s' % args.content)
         return None
 
-    # -- output
+    # --output
     dirname = os.path.dirname(args.output)
     try:
         if len(dirname) > 0:

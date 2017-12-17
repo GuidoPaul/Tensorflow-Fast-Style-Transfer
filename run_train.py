@@ -3,6 +3,8 @@
 
 import argparse
 from datetime import datetime
+import os
+
 import tensorflow as tf
 
 import style_transfer_trainer
@@ -114,6 +116,119 @@ def check_args(args):
     """
     checking arguments
     """
+    # --vgg_model
+    model_file_path = args.vgg_model + '/' + vgg19.MODEL_FILE_NAME
+    try:
+        assert os.path.exists(model_file_path)
+    except Exception:
+        print('There is no %s' % model_file_path)
+        return None
+    try:
+        size_in_KB = os.path.getsize(model_file_path)
+        assert abs(size_in_KB - 534904783) < 10
+    except Exception:
+        print('check file size of \'imagenet-vgg-verydeep-19.mat\'')
+        print('there are some files with the same name')
+        print('pre_trained_model used here can be downloaded from bellow')
+        print(
+            'http://www.vlfeat.org/matconvnet/models/imagenet-vgg-verydeep-19.mat'
+        )
+        return None
+
+    # --trainDB_path
+    try:
+        assert os.path.exists(args.trainDB_path)
+    except Exception:
+        print('There is no %s' % args.trainDB_path)
+        return None
+
+    # --style
+    try:
+        assert os.path.exists(args.style)
+    except Exception:
+        print('There is no %s' % args.style)
+        return None
+
+    # --output
+    dirname = os.path.dirname(args.output)
+    try:
+        if len(dirname) > 0:
+            os.stat(dirname)
+    except Exception:
+        os.mkdir(dirname)
+
+    # --content_weight
+    try:
+        assert args.content_weight > 0
+    except Exception:
+        print('content weight must be positive')
+
+    # --style_weight
+    try:
+        assert args.style_weight > 0
+    except Exception:
+        print('style weight must be positive')
+
+    # --tv_weight
+    try:
+        assert args.tv_weight > 0
+    except Exception:
+        print('total variance weight must be positive')
+
+    # --content_layer_weights
+    try:
+        assert len(args.content_layers) == len(args.content_layer_weights)
+    except Exception:
+        print('content layer info and weight info must be matched')
+        return None
+
+    # --style_layer_weights
+    try:
+        assert len(args.style_layers) == len(args.style_layer_weights)
+    except Exception:
+        print('style layer info and weight info must be matched')
+        return None
+
+    # --learn_rate
+    try:
+        assert args.learn_rate > 0
+    except Exception:
+        print('learning rate must be positive')
+
+    # --num_epochs
+    try:
+        assert args.num_epochs >= 1
+    except Exception:
+        print('number of epochs must be larger than or equal to one')
+
+    # --batch_size
+    try:
+        assert args.batch_size >= 1
+    except Exception:
+        print('batch size must be larger than or equal to one')
+
+    # --checkpoint_every
+    try:
+        assert args.checkpoint_every >= 1
+    except Exception:
+        print('checkpoint period must be larger than or equal to one')
+
+    # --test_image
+    try:
+        if args.test_image is not None:
+            assert os.path.exists(args.test_image)
+    except Exception:
+        print('There is no %s' % args.test_image)
+        return None
+
+    # --max_size
+    try:
+        if args.max_size is not None:
+            assert args.max_size > 0
+    except Exception:
+        print('The maximum width or height of input image must be positive')
+        return None
+
     return args
 
 
