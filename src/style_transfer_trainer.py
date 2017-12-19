@@ -3,6 +3,9 @@
 
 import collections
 import numpy as np
+import os
+import time
+
 import tensorflow as tf
 
 import utils
@@ -13,7 +16,7 @@ class StyleTransferTrainer(object):
     def __init__(self, content_layer_ids, style_layer_ids, session, net,
                  content_images, style_image, content_weight, style_weight,
                  tv_weight, learn_rate, num_epochs, batch_size, check_period,
-                 save_path, test_image, max_size):
+                 save_dir, style_name, test_image, max_size):
         self.net = net
         self.sess = session
 
@@ -38,7 +41,9 @@ class StyleTransferTrainer(object):
         self.check_period = check_period
 
         # path for model to be saved
-        self.save_path = save_path
+        self.save_dir = save_dir
+        self.style_name = style_name
+        self.save_path = os.path.join(self.save_dir, self.style_name + '.ckpt')
 
         # image transform network
         self.transform = transform.Transform()
@@ -198,7 +203,7 @@ class StyleTransferTrainer(object):
 
     def train(self):
         # ----- Define optimizer Adam -----
-        global_step = tf.contrib.framework.get_or_create_global_step()
+        global_step = tf.train.get_or_create_global_step()
         trainable_variables = tf.trainable_variables()
         grads = tf.gradients(self.L_total, trainable_variables)
 
@@ -214,23 +219,23 @@ class StyleTransferTrainer(object):
 
         # op to write logs to Tensorboard
         summary_writer = tf.summary.FileWriter(
-            self.save_path, graph=tf.get_default_graph())
+            self.save_dir, graph=tf.get_default_graph())
 
         # ----- Session run -----
         self.sess.run(tf.global_variables_initializer())
 
         # saver to save model
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(max_to_keep=1)
 
         # restore check-point if it exits
         checkpoint_exists = True
         try:
-            ckpt_state = tf.train.get_checkpoint_state(self.save_path)
+            ckpt_state = tf.train.get_checkpoint_state(self.save_dir)
         except tf.errors.OutOfRangeError as e:
             print('Cannot restore checkpoint: %s' % e)
             checkpoint_exists = False
         if not (ckpt_state and ckpt_state.model_checkpoint_path):
-            print('No model to restore at %s' % self.save_path)
+            print('No model to restore at %s' % self.save_dir)
             checkpoint_exists = False
 
         if checkpoint_exists:
@@ -263,7 +268,7 @@ class StyleTransferTrainer(object):
 
                 assert x_batch.shape[0] == self.batch_size
 
-                _, summary, L_total, L_content, L_style, L_tv, step = self.sess.run(
+                _, summary, L_total, L_content, L_style, L_tv, gstep = self.sess.run(
                     [
                         train_op, merged_summary_op, self.L_total,
                         self.L_content, self.L_style, self.L_tv, global_step
@@ -271,15 +276,17 @@ class StyleTransferTrainer(object):
                     feed_dict={self.x_c: x_batch,
                                self.x_s: self.x_s0})
 
-                print('epoch : %d, iter : %4d, ' % (epoch, step),
-                      'L_total : %g, L_content : %g, L_style : %g, L_tv : %g' %
-                      (L_total, L_content, L_style, L_tv))
+                ftime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                print(
+                    '%s, epoch: %d, iter: %4d,' % (ftime, epoch, gstep),
+                    'L_total: %.4e, L_content: %.4e, L_style: %.4e, L_tv: %.4e'
+                    % (L_total, L_content, L_style, L_tv))
 
                 # write logs at every iteration
                 summary_writer.add_summary(summary, iterations)
 
-                if step % self.check_period == 0:
-                    saver.save(self.sess, self.save_path + '/final.ckpt', step)
+                if gstep % self.check_period == 0:
+                    saver.save(self.sess, self.save_path, gstep)
 
                     if self.TEST:
                         output_image = self.sess.run(
@@ -289,8 +296,9 @@ class StyleTransferTrainer(object):
                             output_image[0])  # remove one dim for batch
                         output_image = np.clip(output_image, 0., 255.)
 
-                        utils.save_image(output_image, self.save_path +
-                                         '/result_' + "%05d" % step + '.jpg')
+                        test_save_path = os.path.join(self.save_dir,
+                                                      '%05d.jpg' % gstep)
+                        utils.save_image(output_image, test_save_path)
             epoch += 1
             iterations = 0
-        saver.save(self.sess, self.save_path + '/final.ckpt')
+        saver.save(self.sess, self.save_path)

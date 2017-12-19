@@ -10,6 +10,7 @@ import scipy
 
 # borrowed from https://github.com/lengstrom/fast-style-transfer/blob/master/src/utils.py
 def get_img(src, img_size=False):
+    print(scipy.__version__)
     img = scipy.misc.imread(src, mode='RGB')
     if not (len(img.shape) == 3 and img.shape[2] == 3):
         img = np.dstack((img, img, img))

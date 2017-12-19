@@ -30,6 +30,7 @@ class StyleTransferTester(object):
         self.y_hat = self.transform.net(self.xi / 255.0)
         self.y_hat = tf.squeeze(self.y_hat)  # remove one dim for batch
         self.y_hat = tf.clip_by_value(self.y_hat, 0., 255.)
+        tf.identity(self.y_hat, name='output')
 
     def test(self):
         # initialize parameters

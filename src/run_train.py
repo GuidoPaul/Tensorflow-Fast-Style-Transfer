@@ -246,6 +246,7 @@ def main():
     content_images = utils.get_files(args.trainDB_path)
 
     # load style image
+    style_name = os.path.basename(args.style).split('.')[0]
     style_image = utils.load_image(args.style)
 
     # create a map for content layers info
@@ -277,7 +278,8 @@ def main():
         num_epochs=args.num_epochs,
         batch_size=args.batch_size,
         check_period=args.checkpoint_every,
-        save_path=args.output,
+        save_dir=args.output,
+        style_name=style_name,
         test_image=args.test_image,
         max_size=args.max_size)
 

@@ -4,7 +4,9 @@
 import argparse
 from datetime import datetime
 import os
+
 import tensorflow as tf
+from tensorflow.python.tools.freeze_graph import freeze_graph
 
 import utils
 import style_transfer_tester
@@ -34,7 +36,7 @@ def parse_args():
     parser.add_argument(
         '--output',
         type=str,
-        default='result.jpg',
+        default='result',
         help='File path of output image (notation in the paper : y_c)',
         required=True)
 
@@ -91,6 +93,23 @@ def check_args(args):
     return args
 
 
+def freeze(sess, style_model, output, style_name):
+    tf.train.write_graph(
+        sess.graph.as_graph_def(), output, style_name + '.pb', as_text=False)
+
+    freeze_graph(
+        input_graph=os.path.join(output, style_name + '.pb'),
+        input_saver='',
+        input_binary=True,
+        input_checkpoint=style_model,
+        output_node_names='output',
+        restore_op_name='save/restore_all',
+        filename_tensor_name='save/Const:0',
+        output_graph=os.path.join(output, 'frozen_%s.pb' % style_name),
+        clear_devices=False,
+        initializer_nodes='')
+
+
 def main():
     # parse arguments
     args = parse_args()
@@ -98,7 +117,12 @@ def main():
         exit()
 
     # load content image
-    content_image = utils.load_image(args.content, max_size=args.max_size)
+    content_image = utils.load_image(
+        args.content, shape=(480, 640), max_size=args.max_size)
+
+    # style and content name
+    style_name = os.path.basename(args.style_model).split('.')[0]
+    content_name = os.path.basename(args.content).split('.')[0]
 
     # open session
     soft_config = tf.ConfigProto(allow_soft_placement=True)
@@ -114,11 +138,16 @@ def main():
     output_image = transformer.test()
     end_time = datetime.now()
 
+    # freeze graph
+    freeze(sess, args.style_model, args.output, style_name)
+
     # close session
     sess.close()
 
     # save result
-    utils.save_image(output_image, args.output)
+    utils.save_image(output_image,
+                     os.path.join(args.output, '%s_%s.jpg' % (content_name,
+                                                              style_name)))
 
     # report execution time
     shape = content_image.shape  # (batch, width, height, channel)
